@@ -9,6 +9,7 @@ def One_Mode_Squeeze(r,theta):
                   [-np.sinh(r)*np.sin(theta), np.cosh(r)+np.sinh(r)*np.cos(theta)]])
     return S
 
+#Two mode transformations
 def Phase_rotation(theta):
     """Single mode phase rotation symplectic transformation"""
     R = np.array([[np.cos(theta), -np.sin(theta)],
