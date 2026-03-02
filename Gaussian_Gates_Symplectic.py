@@ -1,20 +1,57 @@
 import numpy as np
 
+# Symplectic form generator of size 2 x 2
+epsilon = np.array([[0, 1], [-1, 0]])
+# Symplectic form generator of size 2n x 2n
+def Omega(n: int):
+    """
+    Generate the symplectic form Omega for n modes.
+
+    Parameters
+    ----------
+    n : int
+        Number of modes.
+
+    Returns
+    -------
+    NDArray
+        Symplectic form Omega, shape (2n, 2n).
+    """
+    # Blockdiagonal matrix with n blocks of epsilon
+    return np.kron(np.eye(n), epsilon)
+
+# Simplectic form for two vectors x, y in R^2n
+def simplectic_form(x, y):
+    if len(x) != len(y) or len(x) % 2 != 0:
+        raise ValueError("Input vectors must have the same even length and be in R^2n.")
+    
+    n = len(x) // 2
+    
+    if n == 1:
+        return x[0]*y[1] - x[1]*y[0]
+    else:
+        return np.einsum('ij,jk,kl->il', x.T, Omega(n), y) 
+###################################################################################
 # Gaussian Transformations as symplectic matrices
 
-#One mode transformations
-def One_Mode_Squeeze(r,theta):
+#One mode Gaussian transformations
+def One_Mode_Squeeze(r,theta = 0):
     """Single mode squeezing symplectic transformation"""
     S = np.array([[np.cosh(r)-np.sinh(r)*np.cos(theta), -np.sinh(r)*np.sin(theta)],
                   [-np.sinh(r)*np.sin(theta), np.cosh(r)+np.sinh(r)*np.cos(theta)]])
     return S
 
-#Two mode transformations
 def Phase_rotation(theta):
     """Single mode phase rotation symplectic transformation"""
     R = np.array([[np.cos(theta), -np.sin(theta)],
                   [np.sin(theta), np.cos(theta)]])
     return R
+
+def One_Mode_Symplectic(theta, r, phi):
+    """General single mode symplectic transformation"""
+    return np.einsum('ij,jk,kl->il', Phase_rotation(theta), One_Mode_Squeeze(r), Phase_rotation(phi))
+
+# Two mode Gaussian transformations
 
 def Beam_splitter(theta):
     """Two mode beam splitter symplectic transformation"""
@@ -25,7 +62,7 @@ def Beam_splitter(theta):
                    [0, -np.sqrt(1-tau), 0, np.sqrt(tau)]])
     return BS
 
-def Two_Mode_Squeeze(r, theta):
+def Two_Mode_Squeeze(r, theta = 0):
     """Two mode squeezing symplectic transformation"""
     S = np.array([[np.cosh(r), 0, np.sinh(r)*np.cos(theta), np.sinh(r)*np.sin(theta)],
                   [0, np.cosh(r), np.sinh(r)*np.sin(theta), -np.sinh(r)*np.cos(theta)],
@@ -40,6 +77,31 @@ def Controlled_Z(phi):
                    [0, 0, 1, 0],
                    [phi, 0, 0, 1]])
     return CZ
+
+#################################################################################
+# N-mode gate builders (defer N to the state)
+def S(mode, r, theta=0.0):
+    """Builder for N-mode single-mode squeezing on a given mode."""
+    return lambda N: One_Mode_Squeeze_N_mode(r, theta, mode, N)
+
+def R(mode, theta):
+    """Builder for N-mode phase rotation on a given mode."""
+    return lambda N: Phase_rotation_N_mode(theta, mode, N)
+
+def BS(modes, theta):
+    """Builder for N-mode beam splitter on a pair of modes."""
+    mode1, mode2 = modes
+    return lambda N: Beam_splitter_N_mode(theta, mode1, mode2, N)
+
+def TMS(modes, r, theta=0.0):
+    """Builder for N-mode two-mode squeezing on a pair of modes."""
+    mode1, mode2 = modes
+    return lambda N: Two_Mode_Squeeze_N_mode(r, theta, mode1, mode2, N)
+
+def CZ(modes, phi):
+    """Builder for N-mode controlled-Z on a pair of modes."""
+    mode1, mode2 = modes
+    return lambda N: Controlled_Z_N_mode(phi, mode1, mode2, N)
 
 #################################################################################
 #N mode Gaussian transformations
